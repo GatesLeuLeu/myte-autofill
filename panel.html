@@ -109,11 +109,17 @@
                 <span class="myte-chevron"></span>
             </summary>
             <div class="myte-block-inner">
+                <label class="myte-checkbox myte-weekly-toggle">
+                    <input type="checkbox" id="myte-weekly-pattern-enabled" checked />
+                    Apply weekly work location pattern
+                </label>
+
                 <div class="myte-week-rows">
                     <div class="myte-week-row">
                         <div class="myte-week-label">Mon</div>
                         <select data-day-index="0" class="myte-week-select" aria-label="Monday work location">
-                            <option value="HW">Homeworking</option>
+                            <option value="HW">Homeworking - Full Day</option>
+                            <option value="HW_HALF">Homeworking - Half Day</option>
                             <option value="Office">Office / Client</option>
                             <option value="None">None</option>
                         </select>
@@ -122,7 +128,8 @@
                     <div class="myte-week-row">
                         <div class="myte-week-label">Tue</div>
                         <select data-day-index="1" class="myte-week-select" aria-label="Tuesday work location">
-                            <option value="HW">Homeworking</option>
+                            <option value="HW">Homeworking - Full Day</option>
+                            <option value="HW_HALF">Homeworking - Half Day</option>
                             <option value="Office" selected>Office / Client</option>
                             <option value="None">None</option>
                         </select>
@@ -131,7 +138,8 @@
                     <div class="myte-week-row">
                         <div class="myte-week-label">Wed</div>
                         <select data-day-index="2" class="myte-week-select" aria-label="Wednesday work location">
-                            <option value="HW">Homeworking</option>
+                            <option value="HW">Homeworking - Full Day</option>
+                            <option value="HW_HALF">Homeworking - Half Day</option>
                             <option value="Office" selected>Office / Client</option>
                             <option value="None">None</option>
                         </select>
@@ -140,7 +148,8 @@
                     <div class="myte-week-row">
                         <div class="myte-week-label">Thu</div>
                         <select data-day-index="3" class="myte-week-select" aria-label="Thursday work location">
-                            <option value="HW">Homeworking</option>
+                            <option value="HW">Homeworking - Full Day</option>
+                            <option value="HW_HALF">Homeworking - Half Day</option>
                             <option value="Office">Office / Client</option>
                             <option value="None">None</option>
                         </select>
@@ -149,7 +158,8 @@
                     <div class="myte-week-row">
                         <div class="myte-week-label">Fri</div>
                         <select data-day-index="4" class="myte-week-select" aria-label="Friday work location">
-                            <option value="HW">Homeworking</option>
+                            <option value="HW">Homeworking - Full Day</option>
+                            <option value="HW_HALF">Homeworking - Half Day</option>
                             <option value="Office">Office / Client</option>
                             <option value="None">None</option>
                         </select>

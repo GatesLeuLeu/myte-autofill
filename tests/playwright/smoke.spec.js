@@ -31,6 +31,7 @@ function buildCategoryGridMarkup() {
     markup += `
       <div id="timeCategoryCell-2-${index}" class="${specialClass.trim()}">
         <input type="checkbox" id="homeworking-full-day-${index}">
+        <input type="checkbox" id="homeworking-half-day-${index}">
         <input type="checkbox" id="office-client-${index}">
         <input type="checkbox" id="jai-respect-mon-repos-quotidien-${index}">
         <input type="checkbox" id="jai-respect-mon-repos-hebdomadaire-${index}">
@@ -229,7 +230,7 @@ test.describe("content.js smoke tests", () => {
       weeklyPattern: {
         0: "Office",
         1: "None",
-        2: "HW",
+        2: "HW_HALF",
         3: "Office",
         4: "HW"
       },
@@ -256,11 +257,63 @@ test.describe("content.js smoke tests", () => {
     await expect(page.locator("#entryGridHoursCell-0-1 [contenteditable='true']")).toHaveText("1.9");
     await expect(page.locator("#entryGridHoursCell-0-2 [contenteditable='true']")).toHaveText("5.8");
     await expect(page.locator("#office-client-0")).toBeChecked();
-    await expect(page.locator("#homeworking-full-day-3")).toBeChecked();
+    await expect(page.locator("#homeworking-full-day-3")).not.toBeChecked();
+    await expect(page.locator("#homeworking-half-day-3")).toBeChecked();
     await expect(page.locator("#jai-respect-mon-repos-quotidien-0")).toBeChecked();
     await expect(page.locator("#jai-respect-mon-repos-hebdomadaire-5")).toBeChecked();
 
     await attachSuccessfulArtifacts(page, testInfo, "fill-timesheet", browserOutput);
+  });
+
+  test("clears work location and rest rows when panel toggles are disabled", async ({ page }, testInfo) => {
+    const browserOutput = collectBrowserOutput(page);
+    await installExtensionHarness(page, {
+      dailyHours: 7.7,
+      weeklyPattern: { 0: "HW", 1: "HW", 2: "HW", 3: "HW", 4: "HW" },
+      weeklyPatternEnabled: false,
+      wbsAllocations: [{ code: "WBS-1", weight: 1 }],
+      availableWbs: [{ code: "WBS-1", description: "Migration" }],
+      favoriteWbs: [],
+      autoCheckRest: false,
+      themeStyle: "corporate"
+    });
+
+    await page.evaluate(() => {
+      [
+        "homeworking-full-day-0",
+        "homeworking-half-day-0",
+        "office-client-0",
+        "jai-respect-mon-repos-quotidien-0",
+        "jai-respect-mon-repos-hebdomadaire-0",
+        "homeworking-full-day-2",
+        "homeworking-half-day-2",
+        "office-client-2",
+        "jai-respect-mon-repos-quotidien-2",
+        "jai-respect-mon-repos-hebdomadaire-2"
+      ].forEach((id) => {
+        document.getElementById(id).checked = true;
+      });
+    });
+
+    await openPanel(page);
+    await expect(page.locator("#myte-weekly-pattern-enabled")).not.toBeChecked();
+    await expect(page.locator(".myte-week-rows")).toBeHidden();
+
+    await page.click("#myte-fill-btn-fixed");
+
+    await expect(page.locator("#myte-helper-panel")).toHaveCount(0);
+    await expect(page.locator("#homeworking-full-day-0")).not.toBeChecked();
+    await expect(page.locator("#homeworking-half-day-0")).not.toBeChecked();
+    await expect(page.locator("#office-client-0")).not.toBeChecked();
+    await expect(page.locator("#jai-respect-mon-repos-quotidien-0")).not.toBeChecked();
+    await expect(page.locator("#jai-respect-mon-repos-hebdomadaire-0")).not.toBeChecked();
+    await expect(page.locator("#homeworking-full-day-2")).toBeChecked();
+    await expect(page.locator("#homeworking-half-day-2")).toBeChecked();
+    await expect(page.locator("#office-client-2")).toBeChecked();
+    await expect(page.locator("#jai-respect-mon-repos-quotidien-2")).toBeChecked();
+    await expect(page.locator("#jai-respect-mon-repos-hebdomadaire-2")).toBeChecked();
+
+    await attachSuccessfulArtifacts(page, testInfo, "disabled-category-toggles", browserOutput);
   });
 
   test("loads active WBS entries from the popup and seeds the first allocation", async ({ page }, testInfo) => {
