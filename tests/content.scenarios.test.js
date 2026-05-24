@@ -577,9 +577,6 @@ describe("content.js scenarios", () => {
     // Simulate cold-load: the very first execCommand("insertText") on the
     // first editable is silently swallowed (no-op), matching the observed
     // behaviour on a fresh MyTE page.
-    const firstEditable = document.querySelector(
-      '#entryGridHoursCell-0-1 [contenteditable="true"]'
-    );
     let insertBlocked = true;
     const origExec = document.execCommand.bind(document);
     vi.spyOn(document, "execCommand").mockImplementation((cmd, ui, val) => {
