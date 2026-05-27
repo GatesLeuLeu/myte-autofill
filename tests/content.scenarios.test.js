@@ -36,41 +36,51 @@ function buildHoursGrid(options = {}) {
 }
 
 function buildCategoryGrid(options = {}) {
-  const { cellCount = 6, specialIndices = [2] } = options;
+  const {
+    cellCount = 6,
+    specialIndices = [2],
+    rowId = 2,
+    includeWorkLocation = true,
+    includeRest = true
+  } = options;
   const specialIndexSet = new Set(specialIndices);
   const fragment = document.createDocumentFragment();
 
   for (let index = 0; index < cellCount; index += 1) {
     const cell = document.createElement("div");
-    cell.id = `timeCategoryCell-2-${index}`;
+    cell.id = `timeCategoryCell-${rowId}-${index}`;
     if (specialIndexSet.has(index)) {
       cell.classList.add("special-cell");
     }
 
-    const homeworking = document.createElement("input");
-    homeworking.type = "checkbox";
-    homeworking.id = `homeworking-full-day-${index}`;
-    cell.appendChild(homeworking);
+    if (includeWorkLocation) {
+      const homeworking = document.createElement("input");
+      homeworking.type = "checkbox";
+      homeworking.id = `homeworking-full-day-${index}`;
+      cell.appendChild(homeworking);
 
-    const homeworkingHalfDay = document.createElement("input");
-    homeworkingHalfDay.type = "checkbox";
-    homeworkingHalfDay.id = `homeworking-half-day-${index}`;
-    cell.appendChild(homeworkingHalfDay);
+      const homeworkingHalfDay = document.createElement("input");
+      homeworkingHalfDay.type = "checkbox";
+      homeworkingHalfDay.id = `homeworking-half-day-${index}`;
+      cell.appendChild(homeworkingHalfDay);
 
-    const office = document.createElement("input");
-    office.type = "checkbox";
-    office.id = `office-client-${index}`;
-    cell.appendChild(office);
+      const office = document.createElement("input");
+      office.type = "checkbox";
+      office.id = `office-client-${index}`;
+      cell.appendChild(office);
+    }
 
-    const dailyRest = document.createElement("input");
-    dailyRest.type = "checkbox";
-    dailyRest.id = `jai-respect-mon-repos-quotidien-${index}`;
-    cell.appendChild(dailyRest);
+    if (includeRest) {
+      const dailyRest = document.createElement("input");
+      dailyRest.type = "checkbox";
+      dailyRest.id = `jai-respect-mon-repos-quotidien-${index}`;
+      cell.appendChild(dailyRest);
 
-    const weeklyRest = document.createElement("input");
-    weeklyRest.type = "checkbox";
-    weeklyRest.id = `jai-respect-mon-repos-hebdomadaire-${index}`;
-    cell.appendChild(weeklyRest);
+      const weeklyRest = document.createElement("input");
+      weeklyRest.type = "checkbox";
+      weeklyRest.id = `jai-respect-mon-repos-hebdomadaire-${index}`;
+      cell.appendChild(weeklyRest);
+    }
 
     fragment.appendChild(cell);
   }
@@ -100,6 +110,17 @@ function buildDateHeaders(weekdayLabels) {
   });
 
   document.body.appendChild(header);
+}
+
+function localizeCommittedHourDisplays(root = document) {
+  root.querySelectorAll('[contenteditable="true"]').forEach((editor) => {
+    const localizeValue = () => {
+      editor.textContent = editor.textContent.replace(".", ",");
+    };
+
+    editor.addEventListener("change", localizeValue);
+    editor.addEventListener("focusout", localizeValue);
+  });
 }
 
 function installCheckboxMouseEventShim() {
@@ -202,6 +223,15 @@ async function openPanelWithStorage(storageData) {
   return loaded;
 }
 
+async function openPanelAfterPageSetup(storageData, setupPage) {
+  const loaded = await loadContentScript({ storageData });
+  setupPage?.();
+  await loaded.api.init();
+  loaded.api.state.panelOpenRequested = true;
+  await loaded.api.createPanel();
+  return loaded;
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   globalThis.MouseEvent = NativeMouseEvent;
@@ -266,6 +296,59 @@ describe("content.js scenarios", () => {
     expect(weekRows.hidden).toBe(false);
   });
 
+  it("normalizes daily hours input to a dot decimal in the panel", async () => {
+    const { api, storageState } = await openPanelWithStorage({
+      dailyHours: "7,7",
+      availableWbs: [{ code: "WBS-1", description: "Migration" }],
+      wbsAllocations: [{ code: "WBS-1", weight: 1 }]
+    });
+
+    const input = api.state.panel.querySelector("#myte-daily-hours");
+    expect(input.value).toBe("7.7");
+
+    input.value = "8,2";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(input.value).toBe("8.2");
+
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(input.value).toBe("8.2");
+    expect(storageState.myteAutofillConfig.dailyHours).toBe(8.2);
+  });
+
+  it("hides auto rest when daily and weekly rest rows are absent", async () => {
+    const { api } = await openPanelAfterPageSetup(
+      {
+        availableWbs: [{ code: "WBS-1", description: "Migration" }],
+        wbsAllocations: [{ code: "WBS-1", weight: 1 }]
+      },
+      () => buildCategoryGrid({ includeRest: false })
+    );
+
+    const option = api.state.panel.querySelector("#myte-auto-rest-option");
+    const checkbox = api.state.panel.querySelector("#myte-auto-rest");
+
+    expect(option.hidden).toBe(true);
+    expect(option.getAttribute("aria-hidden")).toBe("true");
+    expect(checkbox.disabled).toBe(true);
+  });
+
+  it("shows auto rest when rest rows exist on arbitrary MyTE row ids", async () => {
+    const { api } = await openPanelAfterPageSetup(
+      {
+        availableWbs: [{ code: "WBS-1", description: "Migration" }],
+        wbsAllocations: [{ code: "WBS-1", weight: 1 }]
+      },
+      () => buildCategoryGrid({ rowId: 5, includeWorkLocation: false })
+    );
+
+    const option = api.state.panel.querySelector("#myte-auto-rest-option");
+    const checkbox = api.state.panel.querySelector("#myte-auto-rest");
+
+    expect(option.hidden).toBe(false);
+    expect(option.getAttribute("aria-hidden")).toBe("false");
+    expect(checkbox.disabled).toBe(false);
+  });
+
   it("fills a multi-WBS week with exact rounded hours", async () => {
     const { api } = await loadContentScript();
     buildHoursGrid();
@@ -288,6 +371,75 @@ describe("content.js scenarios", () => {
         document.querySelector(`#entryGridHoursCell-${dayIndex}-2 [contenteditable="true"]`).textContent
       ).toBe("5.8");
     }
+  });
+
+  it("types dot decimals into hour cells even when fill options use a comma", async () => {
+    const { api } = await loadContentScript();
+    buildHoursGrid();
+
+    const result = await api.fillTimesheetCellsWithGptLogic({
+      hours: "7,7",
+      resolvedSelections: [{ rowNumber: 1, code: "WBS-1", rowIndex: 1 }],
+      wbsSelections: [{ rowNumber: 1, code: "WBS-1" }]
+    });
+
+    expect(result.hours).toBe("7.7");
+    expect(result.failedCellCount).toBe(0);
+    expect(
+      document.querySelector('#entryGridHoursCell-0-1 [contenteditable="true"]').textContent
+    ).toBe("7.7");
+  });
+
+  it("accepts localized comma decimals after MyTE commits hour values", async () => {
+    const { api } = await loadContentScript();
+    buildHoursGrid();
+    localizeCommittedHourDisplays();
+
+    const success = await api.fillTimesheetWithConfig({
+      dailyHours: 7.7,
+      wbsAllocations: [{ code: "WBS-1", weight: 1 }]
+    });
+
+    expect(success).toBe(true);
+    expect(globalThis.alert).not.toHaveBeenCalledWith(
+      expect.stringContaining("did not keep their value")
+    );
+
+    for (let dayIndex = 0; dayIndex < 5; dayIndex += 1) {
+      expect(
+        document.querySelector(`#entryGridHoursCell-${dayIndex}-1 [contenteditable="true"]`).textContent
+      ).toBe("7,7");
+    }
+  });
+
+  it("applies time category checkboxes after localized committed hours from the panel", async () => {
+    const { api } = await openPanelWithStorage({
+      dailyHours: 7.7,
+      availableWbs: [{ code: "WBS-1", description: "Migration" }],
+      wbsAllocations: [{ code: "WBS-1", weight: 1 }],
+      weeklyPattern: {
+        0: "Office",
+        1: "HW",
+        2: "HW",
+        3: "HW",
+        4: "HW"
+      },
+      autoCheckRest: true
+    });
+    buildHoursGrid();
+    buildCategoryGrid();
+    localizeCommittedHourDisplays();
+    installCheckboxMouseEventShim();
+
+    api.state.panel.querySelector("#myte-fill-btn-fixed").click();
+    await api.wait(700);
+
+    expect(globalThis.alert).not.toHaveBeenCalledWith(
+      expect.stringContaining("did not keep their value")
+    );
+    expect(document.getElementById("office-client-0").checked).toBe(true);
+    expect(document.getElementById("jai-respect-mon-repos-quotidien-0").checked).toBe(true);
+    expect(document.getElementById("jai-respect-mon-repos-hebdomadaire-0").checked).toBe(true);
   });
 
   it("can fill the same timesheet more than once", async () => {
@@ -380,6 +532,99 @@ describe("content.js scenarios", () => {
     expect(result.filledCellCount).toBe(5);
     expect(document.getElementById("hours-cell-0-1").textContent).toBe("7.7");
     expect(document.getElementById("hours-cell-1-1").textContent).toBe("7.7");
+  });
+
+  it("skips holiday columns discovered from Jour Ferie rows in fallback targets", async () => {
+    const { api } = await loadContentScript();
+
+    const gridRoot = document.createElement("div");
+    gridRoot.setAttribute("aria-label", "Time Entry Grid");
+    gridRoot.className = "ag-root";
+    gridRoot.setAttribute("role", "grid");
+
+    const header = document.createElement("div");
+    header.className = "ag-header";
+    ["Mon 25", "Tue 26", "Wed 27"].forEach((label, dayIndex) => {
+      const column = document.createElement("div");
+      column.setAttribute("role", "columnheader");
+      column.setAttribute("col-id", `Date${dayIndex}`);
+      column.textContent = label;
+      header.appendChild(column);
+    });
+    gridRoot.appendChild(header);
+
+    const center = document.createElement("div");
+    center.className = "ag-center-cols-container";
+
+    const workRow = document.createElement("div");
+    workRow.setAttribute("role", "row");
+    workRow.setAttribute("row-id", "1");
+
+    const assignmentCell = document.createElement("div");
+    assignmentCell.setAttribute("col-id", "Assignment");
+    const assignmentButton = document.createElement("button");
+    assignmentButton.className = "assignment-container";
+    assignmentButton.textContent = "WBS-1";
+    assignmentCell.appendChild(assignmentButton);
+    workRow.appendChild(assignmentCell);
+
+    for (let dayIndex = 0; dayIndex < 3; dayIndex += 1) {
+      const outerCell = document.createElement("div");
+      outerCell.id = `entryGridHoursCell-${dayIndex}-1`;
+      outerCell.setAttribute("role", "gridcell");
+      outerCell.setAttribute("col-id", `Date${dayIndex}`);
+
+      const editor = document.createElement("div");
+      editor.id = `hours-cell-${dayIndex}-1`;
+      editor.className = "cellTooltip";
+      editor.setAttribute("contenteditable", "true");
+      editor.setAttribute("aria-disabled", "false");
+      outerCell.appendChild(editor);
+      workRow.appendChild(outerCell);
+    }
+
+    const holidayRow = document.createElement("div");
+    holidayRow.setAttribute("role", "row");
+    holidayRow.setAttribute("row-id", "2");
+
+    const holidayAssignmentCell = document.createElement("div");
+    holidayAssignmentCell.setAttribute("col-id", "Assignment");
+    const holidayAssignmentButton = document.createElement("button");
+    holidayAssignmentButton.className = "assignment-container";
+    holidayAssignmentButton.textContent = "Jour Férié (515B01)";
+    holidayAssignmentCell.appendChild(holidayAssignmentButton);
+    holidayRow.appendChild(holidayAssignmentCell);
+
+    for (let dayIndex = 0; dayIndex < 3; dayIndex += 1) {
+      const holidayCell = document.createElement("div");
+      holidayCell.setAttribute("role", "gridcell");
+      holidayCell.setAttribute("col-id", `Date${dayIndex}`);
+      holidayCell.textContent = dayIndex === 1 ? "7,7" : "";
+      holidayRow.appendChild(holidayCell);
+    }
+
+    center.appendChild(workRow);
+    center.appendChild(holidayRow);
+    gridRoot.appendChild(center);
+    document.body.appendChild(gridRoot);
+
+    const chargeCell = document.createElement("div");
+    chargeCell.id = "entryGridChargeCodeCell-1";
+    chargeCell.textContent = "WBS-1";
+    document.body.appendChild(chargeCell);
+
+    const result = await api.fillTimesheetCellsWithGptLogic({
+      hours: "7.7",
+      resolvedSelections: [{ rowNumber: 1, code: "WBS-1", rowIndex: 1 }],
+      wbsSelections: [{ rowNumber: 1, code: "WBS-1" }]
+    });
+
+    expect(result.filledCellCount).toBe(2);
+    expect(result.failedCellCount).toBe(0);
+    expect(result.nonWorkingColumns).toEqual(["Date1"]);
+    expect(document.getElementById("hours-cell-0-1").textContent).toBe("7.7");
+    expect(document.getElementById("hours-cell-1-1").textContent).toBe("");
+    expect(document.getElementById("hours-cell-2-1").textContent).toBe("7.7");
   });
 
   it("fills a first cell that only exposes an inline input editor after activation", async () => {
@@ -855,7 +1100,7 @@ describe("content.js scenarios", () => {
     expect(document.getElementById("office-client-2").checked).toBe(false);
     expect(document.getElementById("homeworking-full-day-2").checked).toBe(false);
     expect(document.getElementById("jai-respect-mon-repos-quotidien-2").checked).toBe(false);
-    expect(document.getElementById("jai-respect-mon-repos-hebdomadaire-2").checked).toBe(false);
+    expect(document.getElementById("jai-respect-mon-repos-hebdomadaire-2").checked).toBe(true);
 
     expect(document.getElementById("office-client-3").checked).toBe(false);
     expect(document.getElementById("homeworking-full-day-3").checked).toBe(false);
@@ -868,6 +1113,27 @@ describe("content.js scenarios", () => {
     expect(document.getElementById("jai-respect-mon-repos-quotidien-0").checked).toBe(true);
     expect(document.getElementById("homeworking-full-day-5").checked).toBe(true);
     expect(document.getElementById("jai-respect-mon-repos-hebdomadaire-5").checked).toBe(true);
+  });
+
+  it("checks weekly rest on special cells while skipping daily rest", async () => {
+    const { api } = await loadContentScript();
+    buildCategoryGrid({
+      cellCount: 3,
+      rowId: 5,
+      specialIndices: [1],
+      includeWorkLocation: false
+    });
+    installCheckboxMouseEventShim();
+
+    api.applyWeeklyPatternAndRest({
+      weeklyPatternEnabled: false,
+      autoCheckRest: true
+    });
+
+    expect(document.getElementById("jai-respect-mon-repos-quotidien-0").checked).toBe(true);
+    expect(document.getElementById("jai-respect-mon-repos-hebdomadaire-0").checked).toBe(true);
+    expect(document.getElementById("jai-respect-mon-repos-quotidien-1").checked).toBe(false);
+    expect(document.getElementById("jai-respect-mon-repos-hebdomadaire-1").checked).toBe(true);
   });
 
   it("matches weekly pattern checkboxes to the Date column weekdays", async () => {

@@ -125,6 +125,42 @@ function normalizeText(value) {
     .toLowerCase();
 }
 
+function parseLocalizedHourValue(value) {
+  const normalized = normalizeText(value).replace(/\s+/g, "");
+  if (!/^\d+(?:[.,]\d+)?$/.test(normalized)) {
+    return null;
+  }
+
+  const parsed = Number(normalized.replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function areEquivalentHourValues(actualValue, expectedValue) {
+  const actual = parseLocalizedHourValue(actualValue);
+  const expected = parseLocalizedHourValue(expectedValue);
+
+  return actual !== null && expected !== null && Math.abs(actual - expected) < 0.0001;
+}
+
+function formatHoursForInput(value, fallback = defaultConfig.dailyHours) {
+  const parsed = parseLocalizedHourValue(value);
+  const fallbackParsed = parseLocalizedHourValue(fallback);
+  const hours = parsed ?? fallbackParsed ?? defaultConfig.dailyHours;
+
+  return hours.toFixed(1);
+}
+
+function normalizeHoursInputValue(input) {
+  if (!input) return null;
+
+  const nextValue = input.value.replace(/,/g, ".");
+  if (input.value !== nextValue) {
+    input.value = nextValue;
+  }
+
+  return nextValue;
+}
+
 function getGridRoot() {
   return (
     document.querySelector('[aria-label="Time Entry Grid"]') ||
@@ -331,7 +367,15 @@ function forceCommitCell(editableDiv) {
 
 function hasCommittedEditableValue(editableDiv, value) {
   const target = getLiveEditableTarget(editableDiv);
-  return getEditableDisplayText(target || editableDiv) === normalizeText(value);
+  const displayText = getEditableDisplayText(target || editableDiv);
+  const expectedText = normalizeText(value);
+
+  if (displayText === expectedText) {
+    return true;
+  }
+
+  return !!getHourCellContainer(target || editableDiv) &&
+    areEquivalentHourValues(displayText, expectedText);
 }
 
 function selectEditableTargetContents(target) {
@@ -549,7 +593,9 @@ function getAssignmentText(row) {
   return normalizeText(
     assignmentContainer?.getAttribute("aria-label") ||
       assignmentContainer?.innerText ||
-      row.querySelector('[col-id="Assignment"]')?.innerText
+      assignmentContainer?.textContent ||
+      row.querySelector('[col-id="Assignment"]')?.innerText ||
+      row.querySelector('[col-id="Assignment"]')?.textContent
   );
 }
 
@@ -808,23 +854,109 @@ function getNonWorkingColumns(gridRoot) {
       return;
     }
 
-    if (
-      header.classList.contains("isWeekend") ||
-      header.classList.contains("isHoliday")
-    ) {
+    if (isNonWorkingDateElement(header)) {
       nonWorkingColumns.add(columnId);
     }
   });
 
+  markHolidayRowColumns(gridRoot, nonWorkingColumns);
+
   return nonWorkingColumns;
+}
+
+function hasNonWorkingDateText(value) {
+  const normalized = normalizeText(value);
+  if (!normalized) return false;
+
+  const compact = normalized.replace(/[^a-z]/g, "");
+  if (
+    compact.includes("weekend") ||
+    compact.includes("holiday") ||
+    compact.includes("jourferie") ||
+    compact.includes("ferie")
+  ) {
+    return true;
+  }
+
+  const tokens = normalized.split(/[^a-z]+/).filter(Boolean);
+  return tokens.some((token) =>
+    ["sat", "saturday", "sam", "samedi", "sun", "sunday", "dim", "dimanche"].includes(token)
+  );
+}
+
+function getElementSearchText(element) {
+  return [
+    element?.getAttribute?.("class"),
+    element?.getAttribute?.("aria-label"),
+    element?.textContent
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function isNonWorkingDateElement(element) {
+  return !!element && (
+    element.classList?.contains("isWeekend") ||
+    element.classList?.contains("isHoliday") ||
+    hasNonWorkingDateText(getElementSearchText(element))
+  );
+}
+
+function getColumnIdFromCellId(cell) {
+  const id = getHourCellContainer(cell)?.id || cell?.id || "";
+  const match = id.match(/^entryGridHoursCell-(\d+)-/);
+  return match ? `Date${match[1]}` : "";
 }
 
 function getCellColumnId(cell) {
   return (
     cell.closest('[role="gridcell"][col-id]')?.getAttribute("col-id") ||
     getHourCellContainer(cell)?.getAttribute("col-id") ||
+    getColumnIdFromCellId(cell) ||
     ""
   );
+}
+
+function isHolidayAssignmentText(value) {
+  const normalized = normalizeText(value);
+  return normalized.includes("jour ferie") || normalized.includes("holiday");
+}
+
+function hasVisibleCellValue(cell) {
+  return getEditableDisplayText(cell).length > 0 || normalizeText(cell?.textContent).length > 0;
+}
+
+function markHolidayRowColumns(gridRoot, nonWorkingColumns) {
+  const rows = Array.from(
+    gridRoot.querySelectorAll('.ag-center-cols-container [role="row"][row-id]')
+  );
+
+  rows.forEach((row) => {
+    if (!isHolidayAssignmentText(getAssignmentText(row))) {
+      return;
+    }
+
+    row.querySelectorAll('[col-id^="Date"], [id^="entryGridHoursCell-"]').forEach((cell) => {
+      const columnId = getCellColumnId(cell);
+      if (!columnId) {
+        return;
+      }
+
+      if (hasVisibleCellValue(cell) || isNonWorkingDateElement(cell)) {
+        nonWorkingColumns.add(columnId);
+      }
+    });
+  });
+}
+
+function isFallbackWorkingDayCell(cell, nonWorkingColumns) {
+  const columnId = getCellColumnId(cell);
+
+  if (columnId && nonWorkingColumns?.has(columnId)) {
+    return false;
+  }
+
+  return !hasNonWorkingDateText(getElementSearchText(cell));
 }
 
 function isCellFilled(cell) {
@@ -846,21 +978,23 @@ function isWorkingDayCell(cell, nonWorkingColumns) {
     return false;
   }
 
-  const ariaLabel = normalizeText(cell.getAttribute("aria-label"));
-  return !ariaLabel.includes("weekend") && !ariaLabel.includes("holiday");
+  return !hasNonWorkingDateText(getElementSearchText(cell));
 }
 
-function getWorkingDayIndices(exampleRowIndex) {
+function getWorkingDayIndices(exampleRowIndex, nonWorkingColumns = new Set()) {
   const cells = Array.from(
     document.querySelectorAll(`[id^="entryGridHoursCell-"]`)
   ).filter((c) => c.id.endsWith(`-${exampleRowIndex}`));
 
   const indices = [];
   for (const cell of cells) {
-    if (!cell.classList.contains("special-cell")) {
-      const m = cell.id.match(/entryGridHoursCell-(\d+)-/);
-      if (m) indices.push(parseInt(m[1], 10));
+    if (cell.classList.contains("special-cell") ||
+      !isFallbackWorkingDayCell(cell, nonWorkingColumns)) {
+      continue;
     }
+
+    const m = cell.id.match(/entryGridHoursCell-(\d+)-/);
+    if (m) indices.push(parseInt(m[1], 10));
   }
 
   indices.sort((a, b) => a - b);
@@ -900,9 +1034,9 @@ function computeDailyHoursPerWbs(config) {
   return result;
 }
 
-function collectFallbackTargetCells(rowIndex, options) {
+function collectFallbackTargetCells(rowIndex, options, nonWorkingColumns = new Set()) {
   const targetCells = [];
-  const workingDayIndices = getWorkingDayIndices(Number(rowIndex));
+  const workingDayIndices = getWorkingDayIndices(Number(rowIndex), nonWorkingColumns);
 
   for (const dayIndex of workingDayIndices) {
     const cell = document.getElementById(`entryGridHoursCell-${dayIndex}-${rowIndex}`);
@@ -992,7 +1126,7 @@ function collectTargetCellsForSelections(gridRoot, resolvedSelections, options) 
 
   const fallbackCells = [];
   selectedRowIds.forEach((rowId) => {
-    fallbackCells.push(...collectFallbackTargetCells(rowId, options));
+    fallbackCells.push(...collectFallbackTargetCells(rowId, options, nonWorkingColumns));
   });
 
   return selectedRowIds.size
@@ -1002,6 +1136,7 @@ function collectTargetCellsForSelections(gridRoot, resolvedSelections, options) 
 
 async function fillTimesheetCellsWithGptLogic(overrides = {}) {
   const options = { ...MYTE_GPT_FILL_DEFAULTS, ...overrides };
+  options.hours = formatHoursForInput(options.hours);
   const gridRoot = getGridRoot();
 
   if (!gridRoot) {
@@ -1108,7 +1243,7 @@ async function fillTimesheetWithConfig(config) {
     let fillResult;
     try {
       fillResult = await fillTimesheetCellsWithGptLogic({
-        hours: hours.toFixed(1),
+        hours: formatHoursForInput(hours),
         wbsSelections: [wbsSelection],
         resolvedSelections,
         skipFilledCells: false
@@ -1150,9 +1285,15 @@ const WORK_LOCATION_CHECKBOX_PREFIXES = [
   "office-client-"
 ];
 
+const DAILY_REST_CHECKBOX_PREFIX = "jai-respect-mon-repos-quotidien-";
+const WEEKLY_REST_CHECKBOX_PREFIX = "jai-respect-mon-repos-hebdomadaire-";
 const REST_CHECKBOX_PREFIXES = [
-  "jai-respect-mon-repos-quotidien-",
-  "jai-respect-mon-repos-hebdomadaire-"
+  DAILY_REST_CHECKBOX_PREFIX,
+  WEEKLY_REST_CHECKBOX_PREFIX
+];
+const REST_SIDE_HEADER_IDS = [
+  "jai-respect-mon-repos-quotidien-side-header",
+  "jai-respect-mon-repos-hebdomadaire-side-header"
 ];
 
 const WEEKEND_TIME_CATEGORY_INDEX = -1;
@@ -1178,6 +1319,23 @@ function isFillableTimeCategoryCell(cell) {
   return !!cell && !cell.classList.contains("special-cell");
 }
 
+function getCheckboxIndexFromId(id, prefix) {
+  const suffix = String(id || "").slice(prefix.length);
+  return /^\d+$/.test(suffix) ? Number(suffix) : null;
+}
+
+function getTimeCategoryCheckboxes(prefix) {
+  return Array.from(document.querySelectorAll(`input[id^="${prefix}"]`)).filter(
+    (checkbox) => getCheckboxIndexFromId(checkbox.id, prefix) !== null
+  );
+}
+
+function hasRestRows() {
+  return REST_CHECKBOX_PREFIXES.some((prefix) =>
+    document.querySelector(`[id^="${prefix}"]`)
+  ) || REST_SIDE_HEADER_IDS.some((id) => document.getElementById(id));
+}
+
 function getFillableTimeCategoryIndices() {
   const indices = [];
 
@@ -1190,18 +1348,31 @@ function getFillableTimeCategoryIndices() {
   return indices;
 }
 
-function setTimeCategoryCheckbox(prefix, index, desired) {
-  const cb = document.getElementById(prefix + index);
+function setTimeCategoryCheckboxElement(cb, desired, options = {}) {
   if (!cb) return;
 
-  const cell = cb.closest('[id^="timeCategoryCell-"]') || getTimeCategoryCell(index);
-  if (!isFillableTimeCategoryCell(cell)) return;
+  const { skipSpecial = true } = options;
+  if (skipSpecial) {
+    const cell = cb.closest('[id^="timeCategoryCell-"]');
+    if (!isFillableTimeCategoryCell(cell)) return;
+  }
 
   userSetCheckbox(cb, desired);
 }
 
+function setTimeCategoryCheckbox(prefix, index, desired, options = {}) {
+  const cb = document.getElementById(prefix + index);
+  setTimeCategoryCheckboxElement(cb, desired, options);
+}
+
 function setTimeCategoryCheckboxes(prefixes, index, desired) {
   prefixes.forEach((prefix) => setTimeCategoryCheckbox(prefix, index, desired));
+}
+
+function setTimeCategoryCheckboxesByPrefix(prefix, desired, options = {}) {
+  getTimeCategoryCheckboxes(prefix).forEach((checkbox) => {
+    setTimeCategoryCheckboxElement(checkbox, desired, options);
+  });
 }
 
 function getWeekdayIndexFromText(value) {
@@ -1305,8 +1476,11 @@ function applyWeeklyPatternAndRest(config) {
   }
 
   // Daily / weekly rest
-  fillableIndices.forEach((index) => {
-    setTimeCategoryCheckboxes(REST_CHECKBOX_PREFIXES, index, autoCheckRest);
+  setTimeCategoryCheckboxesByPrefix(DAILY_REST_CHECKBOX_PREFIX, autoCheckRest, {
+    skipSpecial: true
+  });
+  setTimeCategoryCheckboxesByPrefix(WEEKLY_REST_CHECKBOX_PREFIX, autoCheckRest, {
+    skipSpecial: !autoCheckRest
   });
 
   console.log("[MyTE] Time categories updated.", {
@@ -1352,6 +1526,23 @@ function updateWeeklyPatternVisibility() {
   const enabled = isWeeklyPatternEnabled();
   weekRows.hidden = !enabled;
   weekRows.setAttribute("aria-hidden", String(!enabled));
+}
+
+function updateAutoRestVisibility() {
+  if (!state.panel) return;
+
+  const autoRestOption = state.panel.querySelector("#myte-auto-rest-option");
+  const autoRest = state.panel.querySelector("#myte-auto-rest");
+  const visible = hasRestRows();
+
+  if (autoRestOption) {
+    autoRestOption.hidden = !visible;
+    autoRestOption.setAttribute("aria-hidden", String(!visible));
+  }
+
+  if (autoRest) {
+    autoRest.disabled = !visible;
+  }
 }
 
 function updateWbsButtonLabel() {
@@ -1890,10 +2081,11 @@ function applyConfigToUI() {
   const cfg = state.config;
 
   const dailyHoursInput = state.panel.querySelector("#myte-daily-hours");
-  if (dailyHoursInput) dailyHoursInput.value = cfg.dailyHours;
+  if (dailyHoursInput) dailyHoursInput.value = formatHoursForInput(cfg.dailyHours);
 
   const autoRest = state.panel.querySelector("#myte-auto-rest");
   if (autoRest) autoRest.checked = !!cfg.autoCheckRest;
+  updateAutoRestVisibility();
 
   const weeklyPatternEnabled = state.panel.querySelector(
     "#myte-weekly-pattern-enabled"
@@ -1980,9 +2172,17 @@ function wirePanelEvents() {
 
   state.panel
     .querySelector("#myte-daily-hours")
+    ?.addEventListener("input", (e) => {
+      normalizeHoursInputValue(e.target);
+    });
+
+  state.panel
+    .querySelector("#myte-daily-hours")
     ?.addEventListener("change", (e) => {
-      const val = Number(e.target.value) || 7.7;
-      state.config.dailyHours = val;
+      normalizeHoursInputValue(e.target);
+      const value = formatHoursForInput(e.target.value);
+      e.target.value = value;
+      state.config.dailyHours = Number(value);
       saveConfig();
     });
 
@@ -2331,6 +2531,8 @@ function exposeTestApi() {
     setWeeklyPatternDay,
     updateWeightSummary,
     validateWbsConfigForFill,
+    hasRestRows,
+    updateAutoRestVisibility,
     createPanel,
     removePanel,
     togglePanel,
