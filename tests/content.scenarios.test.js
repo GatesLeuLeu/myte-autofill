@@ -7,18 +7,21 @@ const NativeMouseEvent = globalThis.MouseEvent;
 
 function buildHoursGrid(options = {}) {
   const { includeChargeCodes = true } = options;
-  const fragment = document.createDocumentFragment();
+  const gridRoot = document.createElement("div");
+  gridRoot.setAttribute("aria-label", "Time Entry Grid");
+  gridRoot.className = "ag-root";
+  gridRoot.setAttribute("role", "grid");
 
   if (includeChargeCodes) {
     const chargeCellOne = document.createElement("div");
     chargeCellOne.id = "entryGridChargeCodeCell-1";
     chargeCellOne.textContent = "WBS-1";
-    fragment.appendChild(chargeCellOne);
+    gridRoot.appendChild(chargeCellOne);
 
     const chargeCellTwo = document.createElement("div");
     chargeCellTwo.id = "entryGridChargeCodeCell-2";
     chargeCellTwo.textContent = "WBS-2";
-    fragment.appendChild(chargeCellTwo);
+    gridRoot.appendChild(chargeCellTwo);
   }
 
   for (let dayIndex = 0; dayIndex < 5; dayIndex += 1) {
@@ -28,11 +31,11 @@ function buildHoursGrid(options = {}) {
       const editor = document.createElement("div");
       editor.setAttribute("contenteditable", "true");
       cell.appendChild(editor);
-      fragment.appendChild(cell);
+      gridRoot.appendChild(cell);
     }
   }
 
-  document.body.appendChild(fragment);
+  document.body.appendChild(gridRoot);
 }
 
 function buildCategoryGrid(options = {}) {

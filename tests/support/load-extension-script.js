@@ -47,6 +47,16 @@ export async function loadContentScript(options = {}) {
     }
   });
 
+  Object.defineProperty(HTMLElement.prototype, "blur", {
+    configurable: true,
+    writable: true,
+    value() {
+      if (activeElement === this) {
+        activeElement = document.body;
+      }
+    }
+  });
+
   Object.defineProperty(document, "execCommand", {
     configurable: true,
     writable: true,

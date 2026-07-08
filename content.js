@@ -165,7 +165,7 @@ function getGridRoot() {
   return (
     document.querySelector('[aria-label="Time Entry Grid"]') ||
     document.querySelector('.ag-root[role="grid"]') ||
-    document.body
+    null
   );
 }
 

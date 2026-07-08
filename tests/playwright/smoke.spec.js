@@ -30,7 +30,7 @@ function buildHoursGridMarkup() {
   }
 
   return `
-    <div class="myte-fake-table myte-fake-hours-table">
+    <div class="myte-fake-table myte-fake-hours-table" aria-label="Time Entry Grid">
       <div class="myte-fake-row myte-fake-header-row">${headerCells}</div>
       ${rowsMarkup}
     </div>
