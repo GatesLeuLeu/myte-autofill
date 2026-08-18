@@ -1,0 +1,44 @@
+name: Package Firefox Extension
+
+on:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install test dependencies
+        run: npm ci
+
+      - name: Run automated tests
+        run: npm test
+
+      - name: Build Firefox package
+        id: package
+        shell: pwsh
+        run: ./scripts/package-firefox.ps1 -WriteGitHubOutput
+
+      - name: Upload Firefox package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firefox-extension-${{ steps.package.outputs.package_version }}
+          path: |
+            ${{ steps.package.outputs.package_path }}
+            ${{ steps.package.outputs.contents_path }}
+          if-no-files-found: error

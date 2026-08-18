@@ -10,7 +10,8 @@ MyTE Autofill Helper is a small Manifest V3 browser extension for Accenture MyTE
 - Stack: plain JavaScript, HTML, CSS
 - Build step: none
 - Primary target: Chrome Web Store
-- Secondary note: Edge compatibility may be mentioned when accurate, but Edge Store publication is not complete
+- Secondary target: Firefox Add-ons (MV3 only)
+- Edge compatibility may be mentioned when accurate, but Edge Store publication is not complete
 
 Use [README.md](README.md) for product-facing usage and packaging details. Use [.github/instructions/myte-extension.instructions.md](.github/instructions/myte-extension.instructions.md) for file-level working rules on the extension sources.
 
@@ -26,10 +27,12 @@ Use [README.md](README.md) for product-facing usage and packaging details. Use [
 - Open Playwright report: `npm run test:smoke:report`
 - Bump version: `./scripts/bump-version.ps1 -Version X.Y.Z`
 - Package Chrome release zip: `./scripts/package-chrome.ps1`
+- Package Firefox submission zip: `./scripts/package-firefox.ps1`
 
 ## Project Map
 
 - [manifest.json](manifest.json): MV3 manifest and authoritative release version
+- [firefox/manifest.json](firefox/manifest.json): Firefox MV3 manifest; version must match the root manifest
 - [background.js](background.js): service worker; keep it thin
 - [content.js](content.js): main content script and primary implementation surface
 - [panel.html](panel.html): fetched panel template
@@ -44,7 +47,7 @@ Use [.github/instructions/myte-extension.instructions.md](.github/instructions/m
 At a repo level, keep these constraints in mind:
 
 - Plain JavaScript, HTML, and CSS only unless the user explicitly asks otherwise.
-- Preserve Manifest V3 compatibility and keep permissions changes conservative.
+- Preserve Manifest V3 compatibility for Chrome and Firefox, and keep permissions changes conservative.
 - Keep the panel/template lifecycle and existing DOM automation patterns intact.
 - Keep stored configuration compact in `chrome.storage.sync`.
 
@@ -66,10 +69,10 @@ At a repo level, keep these constraints in mind:
 
 ## Release Notes
 
-- `manifest.json` is the release baseline.
-- Local packaging flows through [scripts/package-chrome.ps1](scripts/package-chrome.ps1).
+- `manifest.json` is the authoritative release version; `firefox/manifest.json` must use the same version.
+- Local packaging flows through [scripts/package-chrome.ps1](scripts/package-chrome.ps1) and [scripts/package-firefox.ps1](scripts/package-firefox.ps1).
 - Release checklist and notes template live in [.github/CHROME_STORE_RELEASE_TEMPLATE.md](.github/CHROME_STORE_RELEASE_TEMPLATE.md).
-- CI packaging and release flows live in [.github/workflows/package-chrome.yml](.github/workflows/package-chrome.yml) and [.github/workflows/release-chrome.yml](.github/workflows/release-chrome.yml).
+- Chrome CI packaging and release flows live in [.github/workflows/package-chrome.yml](.github/workflows/package-chrome.yml) and [.github/workflows/release-chrome.yml](.github/workflows/release-chrome.yml). Firefox packaging lives in [.github/workflows/package-firefox.yml](.github/workflows/package-firefox.yml); AMO publication remains manual.
 
 ## Specialized Agents
 

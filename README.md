@@ -3,6 +3,7 @@
 Autofill Accenture MyTE timesheets with multi-WBS allocations and homeworking/office patterns.
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome_Extension-Available-blue?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/myte-autofill-helper/dfpohbobkklfchohecohngodhagffhib)
+[![Firefox Add-ons](https://img.shields.io/badge/Firefox_Add--ons-MV3_compatible-orange?logo=firefoxbrowser&logoColor=white)](https://github.com/gla-showcase/myte-autofill)
 ![Edge Add-ons](https://img.shields.io/badge/Edge_Add--ons-Pending-blue?logo=microsoftedge&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen)
@@ -102,6 +103,8 @@ The in-page control panel features:
 
 The tool fills everything and closes itself afterwards.
 
+Firefox users can install the signed package from Firefox Add-ons when it is published. For local testing, use `about:debugging#/runtime/this-firefox`, select **Load Temporary Add-on**, and choose the generated Firefox package's `manifest.json` after extracting it.
+
 ---
 
 ## 🔒 Privacy
@@ -186,6 +189,20 @@ This produces:
 The zip artifact is ready for the Chrome Web Store and contains only the extension payload at the archive root.
 The generated release notes summarize product-impacting changes since the previous version tag and are intended for merge-to-main release prep.
 
+Create the Firefox MV3 submission package with:
+
+```powershell
+./scripts/package-firefox.ps1
+```
+
+This produces:
+
+- `dist/myte-autofill-<version>-firefox.zip`
+- `dist/firefox-package-<version>/`
+- `dist/myte-autofill-<version>-firefox-contents.txt`
+
+Submit the ZIP to [Firefox Add-ons](https://addons.mozilla.org/developers/) for signing and publication. AMO returns the signed XPI for distribution. The root `manifest.json` remains the authoritative release version; `firefox/manifest.json` is the Firefox MV3 variant and must have the same version. The Firefox package script enforces this.
+
 ### Automated Tests
 
 Install the dev-only test tooling with:
@@ -200,10 +217,10 @@ Run the automated tests with:
 npm test
 ```
 
-Run the browser smoke tests with Playwright after installing Chromium once:
+Run the browser smoke tests with Playwright after installing Chromium and Firefox once:
 
 ```powershell
-npx playwright install chromium
+npx playwright install chromium firefox
 npm run test:smoke
 ```
 
@@ -225,7 +242,7 @@ Generate a local coverage report with:
 npm run test:coverage
 ```
 
-The current automated suite covers pure allocation logic, panel lifecycle behavior, MyTE-like DOM scenarios for hour filling, weekly pattern application, WBS autocomplete and favorites, popup-based WBS extraction, and the background action routing logic. A separate Playwright smoke suite runs the real content script in Chromium against a fake MyTE page to verify panel opening, hour filling, and popup-based WBS loading end to end. Both suites run automatically on every pull request (see [GitHub Actions](#github-actions) below). The live MyTE site still requires a manual smoke test after major DOM automation changes.
+The current automated suite covers pure allocation logic, panel lifecycle behavior, MyTE-like DOM scenarios for hour filling, weekly pattern application, WBS autocomplete and favorites, popup-based WBS extraction, and the background action routing logic. A separate Playwright smoke suite runs the real content script in Chromium and Firefox against a fake MyTE page to verify panel opening, hour filling, and popup-based WBS loading end to end. Both suites run automatically on every pull request (see [GitHub Actions](#github-actions) below). The live MyTE site still requires a manual smoke test after major DOM automation changes.
 
 ### Test Outputs
 
@@ -254,6 +271,12 @@ The repository includes a workflow at `.github/workflows/package-chrome.yml`.
 
 The workflow uploads the generated Chrome package and contents manifest as build artifacts.
 It also uploads the generated release notes file.
+
+The repository includes a workflow at `.github/workflows/package-firefox.yml`.
+
+- Run it manually with **workflow_dispatch**
+
+The workflow uploads the Firefox MV3 submission ZIP and contents manifest. Submit that ZIP to AMO manually; AMO publication is intentionally not automated.
 
 The repository also includes a release workflow at `.github/workflows/release-chrome.yml`.
 
@@ -344,6 +367,5 @@ Pull requests should preserve the extension’s **single purpose**:
 ## 📄 License
 
 MIT License.
-
 
 

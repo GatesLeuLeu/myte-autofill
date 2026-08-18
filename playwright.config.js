@@ -11,10 +11,13 @@ export default defineConfig({
     ["json", { outputFile: "test-results/playwright/results.json" }]
   ],
   use: {
-    browserName: "chromium",
     headless: true,
     trace: "on",
     video: "on",
     screenshot: "only-on-failure"
-  }
+  },
+  projects: [
+    { name: "chromium", use: { browserName: "chromium" } },
+    { name: "firefox", use: { browserName: "firefox" } }
+  ]
 });
