@@ -6,14 +6,14 @@ MyTE Autofill Helper is a small, single-maintainer browser extension with one ac
 
 | Version | Supported |
 | - | :-: |
-| Latest (see the version badge in [README.md](README.md), [`manifest.json`](manifest.json), or the [Chrome Web Store listing](https://chromewebstore.google.com/detail/myte-autofill-helper/dfpohbobkklfchohecohngodhagffhib)) | ✅ |
+| Latest (see the version badge in [README.md](README.md) or [`firefox/manifest.json`](firefox/manifest.json)) | ✅ |
 | Older releases | ❌ |
 
 If you're running an older version, please update first — the issue may already be fixed.
 
 ## Reporting a Vulnerability
 
-Please use GitHub's [private vulnerability reporting](https://github.com/gla-showcase/myte-autofill/security/advisories/new) instead of opening a public issue. This creates a draft security advisory visible only to the maintainer until it's resolved.
+Please use GitHub's [private vulnerability reporting](https://github.com/GatesLeuLeu/myte-autofill/security/advisories/new) instead of opening a public issue. This creates a draft security advisory visible only to the maintainer until it's resolved.
 
 What to expect:
 
@@ -34,6 +34,6 @@ Reports most relevant here include:
 
 - Permission or host-access scope creep beyond what's declared in the manifest.
 - Content script / DOM automation issues that could leak, corrupt, or misfile timesheet data.
-- Supply-chain issues in dependencies (`package.json` / `package-lock.json`).
+- Supply-chain issues in dependencies (`package.json` / `pnpm-lock.yaml`).
 
 Vulnerabilities in the MyTE Accenture platform itself are out of scope — this extension only automates existing interactions on it and isn't affiliated with Accenture or the MyTE product team.

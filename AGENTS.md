@@ -9,31 +9,31 @@ MyTE Autofill Helper is a small Manifest V3 browser extension for Accenture MyTE
 - Runtime: browser-only
 - Stack: plain JavaScript, HTML, CSS
 - Build step: none
-- Primary target: Chrome Web Store
-- Secondary target: Firefox Add-ons (MV3 only)
+- Primary maintained target: Firefox Add-ons (MV3 only)
+- Chrome Store files and workflows are inherited upstream tooling; do not treat them as maintained releases from this fork
 - Edge compatibility may be mentioned when accurate, but Edge Store publication is not complete
 
 Use [README.md](README.md) for product-facing usage and packaging details. Use [.github/instructions/myte-extension.instructions.md](.github/instructions/myte-extension.instructions.md) for file-level working rules on the extension sources.
 
 ## Quick Commands
 
-- Install dev dependencies: `npm install`
-- Unit and logic tests: `npm test`
-- Watch tests: `npm run test:watch`
-- Coverage: `npm run test:coverage`
-- Playwright smoke tests: `npm run test:smoke`
-- Playwright smoke tests, headed: `npm run test:smoke:headed`
-- Playwright smoke tests, UI: `npm run test:smoke:ui`
-- Open Playwright report: `npm run test:smoke:report`
+- Install dev dependencies: `pnpm install --frozen-lockfile`
+- Unit and logic tests: `pnpm test`
+- Watch tests: `pnpm run test:watch`
+- Coverage: `pnpm run test:coverage`
+- Playwright smoke tests: `pnpm run test:smoke`
+- Playwright smoke tests, headed: `pnpm run test:smoke:headed`
+- Playwright smoke tests, UI: `pnpm run test:smoke:ui`
+- Open Playwright report: `pnpm run test:smoke:report`
 - Bump version: `./scripts/bump-version.ps1 -Version X.Y.Z`
 - Package Chrome release zip: `./scripts/package-chrome.ps1`
-- Package Firefox submission zip: `./scripts/package-firefox.ps1`
+- Package Firefox submission zip on Linux: `./scripts/package-firefox.sh`
 
 ## Project Map
 
 - [manifest.json](manifest.json): MV3 manifest and authoritative release version
 - [firefox/manifest.json](firefox/manifest.json): Firefox MV3 manifest; version must match the root manifest
-- [background.js](background.js): service worker; keep it thin
+- [background.js](background.js): Chrome service worker and Firefox background script; keep it thin
 - [content.js](content.js): main content script and primary implementation surface
 - [panel.html](panel.html): fetched panel template
 - [styles.css](styles.css): panel styling and theme variables
@@ -47,7 +47,7 @@ Use [.github/instructions/myte-extension.instructions.md](.github/instructions/m
 At a repo level, keep these constraints in mind:
 
 - Plain JavaScript, HTML, and CSS only unless the user explicitly asks otherwise.
-- Preserve Manifest V3 compatibility for Chrome and Firefox, and keep permissions changes conservative.
+- Preserve Firefox MV3 compatibility and keep permissions changes conservative; retain Chrome compatibility where it does not conflict with Firefox support.
 - Keep the panel/template lifecycle and existing DOM automation patterns intact.
 - Keep stored configuration compact in `chrome.storage.sync`.
 
@@ -70,9 +70,9 @@ At a repo level, keep these constraints in mind:
 ## Release Notes
 
 - `manifest.json` is the authoritative release version; `firefox/manifest.json` must use the same version.
-- Local packaging flows through [scripts/package-chrome.ps1](scripts/package-chrome.ps1) and [scripts/package-firefox.ps1](scripts/package-firefox.ps1).
+- Local packaging flows through [scripts/package-chrome.ps1](scripts/package-chrome.ps1) and [scripts/package-firefox.sh](scripts/package-firefox.sh).
 - Release checklist and notes template live in [.github/CHROME_STORE_RELEASE_TEMPLATE.md](.github/CHROME_STORE_RELEASE_TEMPLATE.md).
-- Chrome CI packaging and release flows live in [.github/workflows/package-chrome.yml](.github/workflows/package-chrome.yml) and [.github/workflows/release-chrome.yml](.github/workflows/release-chrome.yml). Firefox packaging lives in [.github/workflows/package-firefox.yml](.github/workflows/package-firefox.yml); AMO publication remains manual.
+- Firefox packaging lives in [.github/workflows/package-firefox.yml](.github/workflows/package-firefox.yml); AMO publication remains manual. Chrome CI packaging and release flows are inherited upstream tooling and are not maintained by this fork.
 
 ## Specialized Agents
 

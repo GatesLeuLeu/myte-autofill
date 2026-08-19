@@ -4,7 +4,7 @@
   "short_name": "MyTE Autofill",
   "version": "1.4.4",
   "description": "Autofill Accenture MyTE timesheets with multi-WBS allocations and homeworking/office patterns.",
-  "homepage_url": "https://github.com/gla-showcase/myte-autofill",
+  "homepage_url": "https://github.com/GatesLeuLeu/myte-autofill",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -26,7 +26,7 @@
     }
   ],
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["background.js"]
   },
   "action": {
     "default_title": "MyTE Autofill"
@@ -41,7 +41,7 @@
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "myte-autofill@gla-showcase.github.io"
+      "id": "myte-autofill@gatesleuleu.github.io"
     }
   }
 }

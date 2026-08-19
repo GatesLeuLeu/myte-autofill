@@ -2,8 +2,8 @@
 
 Autofill Accenture MyTE timesheets with multi-WBS allocations and homeworking/office patterns.
 
-[![Chrome Web Store](https://img.shields.io/badge/Chrome_Extension-Available-blue?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/myte-autofill-helper/dfpohbobkklfchohecohngodhagffhib)
-[![Firefox Add-ons](https://img.shields.io/badge/Firefox_Add--ons-MV3_compatible-orange?logo=firefoxbrowser&logoColor=white)](https://github.com/gla-showcase/myte-autofill)
+[![Firefox](https://img.shields.io/badge/Firefox-Maintained-orange?logo=firefoxbrowser&logoColor=white)](https://github.com/GatesLeuLeu/myte-autofill)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Upstream-blue?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/myte-autofill-helper/dfpohbobkklfchohecohngodhagffhib)
 ![Edge Add-ons](https://img.shields.io/badge/Edge_Add--ons-Pending-blue?logo=microsoftedge&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen)
@@ -13,6 +13,8 @@ Autofill Accenture MyTE timesheets with multi-WBS allocations and homeworking/of
 
 ⚠️ Disclamer: This is an independent helper tool.  
 It is **not** affiliated with, sponsored by, or endorsed by **Accenture** or the official **MyTE** product team.
+
+> This is the Firefox-maintained fork of MyTE Autofill Helper. Firefox releases and support are maintained by [GatesLeuLeu](https://github.com/GatesLeuLeu). Chrome Store resources are retained as upstream references and are not maintained by this fork.
 
 ---
 
@@ -191,8 +193,8 @@ The generated release notes summarize product-impacting changes since the previo
 
 Create the Firefox MV3 submission package with:
 
-```powershell
-./scripts/package-firefox.ps1
+```bash
+./scripts/package-firefox.sh
 ```
 
 This produces:
@@ -205,65 +207,66 @@ Submit the ZIP to [Firefox Add-ons](https://addons.mozilla.org/developers/) for 
 
 ### Automated Tests
 
-Install the dev-only test tooling with:
+Install the dev-only test tooling with pnpm (enabled through Corepack in supported Node.js releases) with:
 
-```powershell
-npm install
+```bash
+corepack enable
+pnpm install --frozen-lockfile
 ```
 
 Run the automated tests with:
 
-```powershell
-npm test
+```bash
+pnpm test
 ```
 
 Run the browser smoke tests with Playwright after installing Chromium and Firefox once:
 
-```powershell
-npx playwright install chromium firefox
-npm run test:smoke
+```bash
+pnpm exec playwright install chromium firefox
+pnpm run test:smoke
 ```
 
 Run them locally with a visible browser window:
 
-```powershell
-npm run test:smoke:headed
+```bash
+pnpm run test:smoke:headed
 ```
 
 Run them in Playwright UI mode for interactive local debugging:
 
-```powershell
-npm run test:smoke:ui
+```bash
+pnpm run test:smoke:ui
 ```
 
 Generate a local coverage report with:
 
-```powershell
-npm run test:coverage
+```bash
+pnpm run test:coverage
 ```
 
 The current automated suite covers pure allocation logic, panel lifecycle behavior, MyTE-like DOM scenarios for hour filling, weekly pattern application, WBS autocomplete and favorites, popup-based WBS extraction, and the background action routing logic. A separate Playwright smoke suite runs the real content script in Chromium and Firefox against a fake MyTE page to verify panel opening, hour filling, and popup-based WBS loading end to end. Both suites run automatically on every pull request (see [GitHub Actions](#github-actions) below). The live MyTE site still requires a manual smoke test after major DOM automation changes.
 
 ### Test Outputs
 
-- `npm test`: Vitest results are printed in the terminal. There is no persistent report file unless you run coverage.
-- `npm run test:coverage`: coverage outputs are written under `coverage/`.
-- `npm run test:smoke`: Playwright writes the HTML report to `playwright-report/`, JSON results to `test-results/playwright/results.json`, and per-test traces/videos/artifacts to `test-results/playwright/artifacts/`.
-- Open the Playwright HTML report with `npm run test:smoke:report`.
+- `pnpm test`: Vitest results are printed in the terminal. There is no persistent report file unless you run coverage.
+- `pnpm run test:coverage`: coverage outputs are written under `coverage/`.
+- `pnpm run test:smoke`: Playwright writes the HTML report to `playwright-report/`, JSON results to `test-results/playwright/results.json`, and per-test traces/videos/artifacts to `test-results/playwright/artifacts/`.
+- Open the Playwright HTML report with `pnpm run test:smoke:report`.
 
 ### GitHub Actions
 
 The repository includes a workflow at `.github/workflows/test.yml`.
 
 - Runs on every pull request and on pushes to `main`
-- The `test` job runs the Vitest suite (`npm test`)
-- The `playwright` job installs Chromium, runs the Playwright smoke suite (`npm run test:smoke`), publishes a pass/fail summary table to the job's GitHub Actions summary page, and uploads the full HTML report (screenshots, videos, traces) as a downloadable `playwright-report` artifact on the workflow run — even when tests fail
+- The `test` job runs the Vitest suite (`pnpm test`)
+- The `playwright` job installs Chromium, runs the Playwright smoke suite (`pnpm run test:smoke`), publishes a pass/fail summary table to the job's GitHub Actions summary page, and uploads the full HTML report (screenshots, videos, traces) as a downloadable `playwright-report` artifact on the workflow run — even when tests fail
 - The `pages` job publishes that same report to GitHub Pages, viewable directly in the browser (no download needed):
-  - Pushes to `main` publish to `https://gla-showcase.github.io/myte-autofill/main/`
-  - Each pull request publishes to its own persistent `https://gla-showcase.github.io/myte-autofill/pr-<number>/`, updated on every push to that PR
+  - Pushes to `main` publish to `https://gatesleuleu.github.io/myte-autofill/main/`
+  - Each pull request publishes to its own persistent `https://gatesleuleu.github.io/myte-autofill/pr-<number>/`, updated on every push to that PR
   - The resulting URL is also printed on the job's GitHub Actions summary page
   - Traces work directly from these pages (no `show-report` command needed) since they're served over `https://`
-- To inspect traces from a CI run locally instead: download the `playwright-report` artifact, unzip it, then run `npx playwright show-report path/to/playwright-report` (opening `index.html` directly won't work for traces, see below)
+- To inspect traces from a CI run locally instead: download the `playwright-report` artifact, unzip it, then run `pnpm exec playwright show-report path/to/playwright-report` (opening `index.html` directly won't work for traces, see below)
 
 The repository includes a workflow at `.github/workflows/package-chrome.yml`.
 
@@ -364,8 +367,12 @@ Pull requests should preserve the extension’s **single purpose**:
 
 ---
 
+## Attribution
+
+The original MyTE Autofill Helper project was created by [GuillaumeLamb](https://github.com/gla-showcase). This fork adapts and maintains the extension for Firefox.
+
+---
+
 ## 📄 License
 
 MIT License.
-
-
