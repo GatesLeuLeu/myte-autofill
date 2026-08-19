@@ -8,6 +8,7 @@ Autofill Accenture MyTE timesheets with multi-WBS allocations and homeworking/of
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen)
 ![Version](https://img.shields.io/badge/Version-1.4.4-purple)
+![Package manager](https://img.shields.io/badge/package%20manager-pnpm-F69220?logo=pnpm&logoColor=white)
 
 <img width="1400" height="933" alt="marquee-promo-tile-1400x560 png" src="https://github.com/user-attachments/assets/de0b8adc-c3d2-4f52-be44-0cfa90b37de0" />
 
@@ -146,6 +147,8 @@ The tool is **not official Accenture software**.
 ---
 
 ## 🛠 Development
+
+This project uses [pnpm](https://pnpm.io/) as its package manager. The required version is pinned in `package.json`; enable Corepack before installing dependencies.
 
 ### Folder Structure
 
