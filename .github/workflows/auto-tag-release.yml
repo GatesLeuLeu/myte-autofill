@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - manifest.json
+      - firefox/manifest.json
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -29,6 +30,15 @@ jobs:
         run: |
           version=$(node -p "require('./manifest.json').version")
           echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Firefox manifest version
+        run: |
+          root_version=$(node -p "require('./manifest.json').version")
+          firefox_version=$(node -p "require('./firefox/manifest.json').version")
+          if [ "$root_version" != "$firefox_version" ]; then
+            printf 'Firefox manifest version must match the authoritative root manifest.json version.\n' >&2
+            exit 1
+          fi
 
       - name: Check if tag already exists
         id: check
@@ -63,4 +73,4 @@ jobs:
       - name: Warn about missing token
         if: steps.check.outputs.exists != 'true' && steps.token.outputs.configured != 'true'
         run: |
-          echo "::warning::manifest.json version ${{ steps.version.outputs.version }} has no matching tag, but COPILOT_AGENT_TOKEN is not configured. A plain GITHUB_TOKEN push cannot be used here because tag pushes made with the default token do not trigger other workflows (release-chrome.yml would never run). Configure COPILOT_AGENT_TOKEN or push the tag manually: git tag v${{ steps.version.outputs.version }} && git push origin v${{ steps.version.outputs.version }}"
+          echo "::warning::manifest.json version ${{ steps.version.outputs.version }} has no matching tag, but COPILOT_AGENT_TOKEN is not configured. A plain GITHUB_TOKEN push cannot be used here because tag pushes made with the default token do not trigger other workflows (release-firefox.yml would never run). Configure COPILOT_AGENT_TOKEN or push the tag manually: git tag v${{ steps.version.outputs.version }} && git push origin v${{ steps.version.outputs.version }}"

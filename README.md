@@ -176,23 +176,7 @@ Update the version and rebuild the package in one step with:
 ./scripts/bump-version.ps1 -Version X.Y.Z
 ```
 
-This updates `manifest.json`, refreshes the README version badge, and rebuilds the Chrome package unless you pass `-SkipPackage`.
-
-Create the Chrome package with:
-
-```powershell
-./scripts/package-chrome.ps1
-```
-
-This produces:
-
-- `dist/myte-autofill-<version>-chrome.zip`
-- `dist/chrome-package-<version>/`
-- `dist/myte-autofill-<version>-chrome-contents.txt`
-- `dist/myte-autofill-<version>-release-notes.md`
-
-The zip artifact is ready for the Chrome Web Store and contains only the extension payload at the archive root.
-The generated release notes summarize product-impacting changes since the previous version tag and are intended for merge-to-main release prep.
+This updates both manifests, refreshes the README version badge, and builds the Firefox package unless you pass `-SkipPackage`. The script requires Bash, such as on Linux, macOS, or Git Bash.
 
 Create the Firefox MV3 submission package with:
 
@@ -271,25 +255,18 @@ The repository includes a workflow at `.github/workflows/test.yml`.
   - Traces work directly from these pages (no `show-report` command needed) since they're served over `https://`
 - To inspect traces from a CI run locally instead: download the `playwright-report` artifact, unzip it, then run `pnpm exec playwright show-report path/to/playwright-report` (opening `index.html` directly won't work for traces, see below)
 
-The repository includes a workflow at `.github/workflows/package-chrome.yml`.
-
-- Run it manually with **workflow_dispatch**
-
-The workflow uploads the generated Chrome package and contents manifest as build artifacts.
-It also uploads the generated release notes file.
-
 The repository includes a workflow at `.github/workflows/package-firefox.yml`.
 
 - Run it manually with **workflow_dispatch**
 
 The workflow uploads the Firefox MV3 submission ZIP and contents manifest. Submit that ZIP to AMO manually; AMO publication is intentionally not automated.
 
-The repository also includes a release workflow at `.github/workflows/release-chrome.yml`.
+The repository also includes a release workflow at `.github/workflows/release-firefox.yml`.
 
 - Push a tag like `v1.2.3`
-- The workflow validates that the tag version matches `manifest.json`, builds the package, creates a GitHub Release, and attaches the zip, contents manifest, and generated release notes
+- The workflow validates that the tag version matches both manifests, builds the Firefox package, creates a GitHub Release, and attaches the ZIP and contents manifest
 
-Tags don't have to be pushed by hand: `.github/workflows/auto-tag-release.yml` runs on every push to `main` that changes `manifest.json`. If the manifest's version doesn't already have a matching `vX.Y.Z` tag, it creates and pushes one, which triggers `release-chrome.yml` automatically. It authenticates with the `COPILOT_AGENT_TOKEN` secret rather than the default `GITHUB_TOKEN`, because tag pushes made with the default token don't trigger other workflows.
+Tags don't have to be pushed by hand: `.github/workflows/auto-tag-release.yml` runs on every push to `main` that changes `manifest.json`. If the manifest's version doesn't already have a matching `vX.Y.Z` tag, it creates and pushes one, which triggers `release-firefox.yml` automatically. It authenticates with the `COPILOT_AGENT_TOKEN` secret rather than the default `GITHUB_TOKEN`, because tag pushes made with the default token don't trigger other workflows.
 
 The repository also includes Copilot bug automation workflows:
 

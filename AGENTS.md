@@ -26,7 +26,6 @@ Use [README.md](README.md) for product-facing usage and packaging details. Use [
 - Playwright smoke tests, UI: `pnpm run test:smoke:ui`
 - Open Playwright report: `pnpm run test:smoke:report`
 - Bump version: `./scripts/bump-version.ps1 -Version X.Y.Z`
-- Package Chrome release zip: `./scripts/package-chrome.ps1`
 - Package Firefox submission zip on Linux: `./scripts/package-firefox.sh`
 
 ## Project Map
@@ -70,9 +69,8 @@ At a repo level, keep these constraints in mind:
 ## Release Notes
 
 - `manifest.json` is the authoritative release version; `firefox/manifest.json` must use the same version.
-- Local packaging flows through [scripts/package-chrome.ps1](scripts/package-chrome.ps1) and [scripts/package-firefox.sh](scripts/package-firefox.sh).
-- Release checklist and notes template live in [.github/CHROME_STORE_RELEASE_TEMPLATE.md](.github/CHROME_STORE_RELEASE_TEMPLATE.md).
-- Firefox packaging lives in [.github/workflows/package-firefox.yml](.github/workflows/package-firefox.yml); AMO publication remains manual. Chrome CI packaging and release flows are inherited upstream tooling and are not maintained by this fork.
+- Local packaging flows through [scripts/package-firefox.sh](scripts/package-firefox.sh).
+- Firefox packaging lives in [.github/workflows/package-firefox.yml](.github/workflows/package-firefox.yml); releases are created by [.github/workflows/release-firefox.yml](.github/workflows/release-firefox.yml). AMO publication remains manual.
 
 ## Specialized Agents
 
