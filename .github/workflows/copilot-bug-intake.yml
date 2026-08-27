@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Ensure agent labels exist
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const labels = [
@@ -94,7 +94,7 @@ jobs:
 
       - name: Validate issue body
         id: validate
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const body = context.payload.issue.body || '';
@@ -123,7 +123,7 @@ jobs:
 
       - name: Mark issue as needing more detail
         if: steps.validate.outputs.valid != 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           MISSING: ${{ steps.validate.outputs.missing }}
         with:
@@ -178,7 +178,7 @@ jobs:
 
       - name: Mark missing token configuration
         if: steps.validate.outputs.valid == 'true' && steps.token.outputs.configured != 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const marker = '<!-- copilot-bug-token-missing -->';
@@ -229,7 +229,7 @@ jobs:
 
       - name: Queue issue for Copilot
         if: steps.validate.outputs.valid == 'true' && steps.token.outputs.configured == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const issue_number = context.payload.issue.number;
@@ -250,7 +250,7 @@ jobs:
         if: steps.validate.outputs.valid == 'true' && steps.token.outputs.configured == 'true'
         id: assign
         continue-on-error: true
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           COPILOT_BUG_BASE_BRANCH: ${{ vars['COPILOT_BUG_BASE_BRANCH'] }}
@@ -297,7 +297,7 @@ jobs:
 
       - name: Mark assignment failure as blocked
         if: steps.validate.outputs.valid == 'true' && steps.token.outputs.configured == 'true' && steps.assign.outcome != 'success'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const marker = '<!-- copilot-bug-assignment-failed -->';
@@ -350,7 +350,7 @@ jobs:
 
       - name: Mark issue as running
         if: steps.validate.outputs.valid == 'true' && steps.token.outputs.configured == 'true' && steps.assign.outcome == 'success'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const marker = '<!-- copilot-bug-started -->';
