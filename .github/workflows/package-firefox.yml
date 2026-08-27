@@ -38,7 +38,7 @@ jobs:
         run: ./scripts/package-firefox.sh --write-github-output
 
       - name: Upload Firefox package artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: firefox-extension-${{ steps.package.outputs.package_version }}
           path: |
