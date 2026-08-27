@@ -54,10 +54,8 @@ async function loadPanelTemplate() {
     }
 
     const html = await resp.text();
-    const tmpl = document.createElement("template");
-    tmpl.innerHTML = html.trim();
-
-    const root = tmpl.content.querySelector("#myte-helper-panel");
+    const panelDocument = new DOMParser().parseFromString(html, "text/html");
+    const root = panelDocument.querySelector("#myte-helper-panel");
     if (!root) {
       console.error("[MyTE] panel.html missing #myte-helper-panel root.");
       return null;
@@ -474,10 +472,12 @@ function showToast(message, type = "info") {
     toast = document.createElement("div");
     toast.id = "myte-toast";
     toast.className = "myte-toast myte-toast-info";
-    toast.innerHTML = `
-      <span class="myte-toast-icon">ℹ️</span>
-      <span class="myte-toast-text"></span>
-    `;
+    const icon = document.createElement("span");
+    icon.className = "myte-toast-icon";
+    icon.textContent = "ℹ️";
+    const text = document.createElement("span");
+    text.className = "myte-toast-text";
+    toast.append(icon, text);
     document.body.appendChild(toast);
   }
 
@@ -1747,7 +1747,7 @@ function closeWbsAutocomplete() {
     const dropdown = row.querySelector(".myte-wbs-dropdown");
     if (dropdown) {
       dropdown.hidden = true;
-      dropdown.innerHTML = "";
+      dropdown.replaceChildren();
     }
   });
 }
@@ -1767,7 +1767,7 @@ function renderWbsAutocomplete(row, index) {
 
   if (!isOpen) {
     dropdown.hidden = true;
-    dropdown.innerHTML = "";
+    dropdown.replaceChildren();
     row.classList.remove("myte-wbs-row-open");
     return;
   }
@@ -1776,24 +1776,52 @@ function renderWbsAutocomplete(row, index) {
   dropdown.hidden = false;
 
   if (!filteredOptions.length) {
-    dropdown.innerHTML = '<div class="myte-wbs-option-empty">No matching WBS</div>';
+    const emptyOption = document.createElement("div");
+    emptyOption.className = "myte-wbs-option-empty";
+    emptyOption.textContent = "No matching WBS";
+    dropdown.replaceChildren(emptyOption);
     return;
   }
 
-  dropdown.innerHTML = filteredOptions
-    .map((wbs) => {
-      const isFav = favoriteCodes.includes(wbs.code);
-      return `
-        <button type="button" class="myte-wbs-option" data-index="${index}" data-code="${escapeHtml(wbs.code)}">
-          <span class="myte-wbs-option-main">
-            ${getWbsOptionTitleMarkup(wbs)}
-            <span class="myte-wbs-option-desc">${escapeHtml(wbs.description || "No description")}</span>
-          </span>
-          ${isFav ? '<span class="myte-wbs-option-fav">★</span>' : ""}
-        </button>
-      `;
-    })
-    .join("");
+  const optionButtons = filteredOptions.map((wbs) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "myte-wbs-option";
+    option.dataset.index = index;
+    option.dataset.code = wbs.code;
+
+    const main = document.createElement("span");
+    main.className = "myte-wbs-option-main";
+
+    const title = document.createElement("span");
+    title.className = "myte-wbs-option-title";
+    const code = document.createElement("span");
+    code.className = "myte-wbs-option-code";
+    code.textContent = wbs.code || "";
+    title.appendChild(code);
+    if (wbs.client) {
+      const client = document.createElement("span");
+      client.className = "myte-wbs-option-client";
+      client.textContent = ` - ${wbs.client}`;
+      title.appendChild(client);
+    }
+
+    const description = document.createElement("span");
+    description.className = "myte-wbs-option-desc";
+    description.textContent = wbs.description || "No description";
+    main.append(title, description);
+    option.appendChild(main);
+
+    if (favoriteCodes.includes(wbs.code)) {
+      const favorite = document.createElement("span");
+      favorite.className = "myte-wbs-option-fav";
+      favorite.textContent = "★";
+      option.appendChild(favorite);
+    }
+
+    return option;
+  });
+  dropdown.replaceChildren(...optionButtons);
 }
 
 function selectWbsForRow(index, wbs) {
@@ -1995,7 +2023,7 @@ function renderWbsList() {
   const allocations = cfg.wbsAllocations || [];
   const favoriteCodes = cfg.favoriteWbs || [];
 
-  container.innerHTML = "";
+  container.replaceChildren();
 
   if (!allocations.length) {
     const info = document.createElement("div");
@@ -2018,32 +2046,65 @@ function renderWbsList() {
         ? formatWbsLabel(selectedWbs)
         : "";
 
-    row.innerHTML = `
-      <div class="myte-wbs-main">
-        <input
-          type="text"
-          class="myte-wbs-picker"
-          data-index="${index}"
-          placeholder="Search WBS by code or description"
-          autocomplete="off"
-          value="${escapeHtml(pickerValue)}"
-        />
-      </div>
-      <input
-        type="number"
-        step="0.01"
-        min="0"
-        class="myte-wbs-weight"
-        data-index="${index}"
-        placeholder="Weight"
-      />
-      <div class="myte-wbs-actions">
-        <button class="myte-wbs-fav" data-index="${index}" title="Toggle favorite">☆</button>
-        <button class="myte-wbs-remove" data-index="${index}" title="Remove">✕</button>
-      </div>
-      <div class="myte-wbs-meta">${getWbsMetaMarkup(selectedWbs)}</div>
-      <div class="myte-wbs-dropdown" hidden></div>
-    `;
+    const main = document.createElement("div");
+    main.className = "myte-wbs-main";
+    const picker = document.createElement("input");
+    picker.type = "text";
+    picker.className = "myte-wbs-picker";
+    picker.dataset.index = index;
+    picker.placeholder = "Search WBS by code or description";
+    picker.autocomplete = "off";
+    picker.value = pickerValue;
+    main.appendChild(picker);
+
+    const weight = document.createElement("input");
+    weight.type = "number";
+    weight.step = "0.01";
+    weight.min = "0";
+    weight.className = "myte-wbs-weight";
+    weight.dataset.index = index;
+    weight.placeholder = "Weight";
+
+    const actions = document.createElement("div");
+    actions.className = "myte-wbs-actions";
+    const favorite = document.createElement("button");
+    favorite.type = "button";
+    favorite.className = "myte-wbs-fav";
+    favorite.dataset.index = index;
+    favorite.title = "Toggle favorite";
+    favorite.textContent = "☆";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "myte-wbs-remove";
+    remove.dataset.index = index;
+    remove.title = "Remove";
+    remove.textContent = "✕";
+    actions.append(favorite, remove);
+
+    const meta = document.createElement("div");
+    meta.className = "myte-wbs-meta";
+    if (selectedWbs) {
+      const code = document.createElement("span");
+      code.className = "myte-wbs-meta-code";
+      code.textContent = selectedWbs.code || "";
+      const separator = document.createElement("span");
+      separator.className = "myte-wbs-meta-sep";
+      separator.textContent = "•";
+      const description = document.createElement("span");
+      description.className = "myte-wbs-meta-desc";
+      description.textContent = selectedWbs.description || "No description";
+      meta.append(code, separator, description);
+    } else {
+      const empty = document.createElement("span");
+      empty.className = "myte-wbs-meta-empty";
+      empty.textContent = "Type to search by code or description.";
+      meta.appendChild(empty);
+    }
+
+    const dropdown = document.createElement("div");
+    dropdown.className = "myte-wbs-dropdown";
+    dropdown.hidden = true;
+    row.append(main, weight, actions, meta, dropdown);
 
     container.appendChild(row);
 
