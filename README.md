@@ -74,6 +74,14 @@ Optionally auto-check:
 
 Works **only** on valid working days (never weekends or special days).
 
+### 🕗 Working Hours (Breaks)
+
+Fills MyTE's "Working Hours" dialog from a saved Mon–Fri schedule: work start/end, break start/end, and an optional second work row (added with the "+" button).
+
+- Open the Working Hours dialog in MyTE, then press **Fill Working Hours** in the panel.
+- Format `HH:MM-HH:MM` per field; an empty field means "none".
+- Weekends are left empty. The extension never presses Save: review and save yourself.
+
 ### 🎨 Modern Embedded UI Panel
 
 The in-page control panel features:

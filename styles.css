@@ -859,3 +859,9 @@
   font-size: 14px;
   border-radius: 8px;
 }
+
+/* Working hours */
+.myte-wh-row { display: grid; grid-template-columns: 36px 1fr 1fr 1fr; gap: 4px; margin: 4px 0; align-items: center; }
+.myte-wh-input { min-width: 0; padding: 3px 4px; font-size: 12px; }
+.myte-wh-input.myte-wh-invalid { outline: 2px solid #d33; }
+#myte-fill-wh-btn { margin-top: 8px; width: 100%; }

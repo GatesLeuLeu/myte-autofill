@@ -15,6 +15,13 @@ const defaultConfig = {
   },
   weeklyPatternEnabled: true,
   autoCheckRest: true,
+  workingHours: {
+    0: { work1: "08:00-14:00", brk: "14:00-15:00", work2: "15:00-17:00" },
+    1: { work1: "08:00-14:00", brk: "14:00-15:00", work2: "15:00-17:00" },
+    2: { work1: "08:00-14:00", brk: "14:00-15:00", work2: "15:00-17:00" },
+    3: { work1: "08:00-14:00", brk: "14:00-15:00", work2: "15:00-17:00" },
+    4: { work1: "08:00-15:00", brk: "", work2: "" }
+  },
   themeStyle: "corporate", // 'corporate' | 'dev'
   wbsAllocations: [],
   availableWbs: [],
@@ -88,6 +95,10 @@ function loadConfig() {
           weeklyPattern: {
             ...defaultConfig.weeklyPattern,
             ...(stored.weeklyPattern || {})
+          },
+          workingHours: {
+            ...defaultConfig.workingHours,
+            ...(stored.workingHours || {})
           },
           favoriteWbs: stored.favoriteWbs || []
         };
@@ -2136,6 +2147,168 @@ function renderWbsList() {
 /***********************
  * Apply config to UI
  ***********************/
+/***********************
+ * WORKING HOURS DIALOG
+ ***********************/
+function parseTimeRange(text) {
+  const m = String(text || "").trim().match(/^(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  const range = {
+    startH: Number(m[1]),
+    startM: Number(m[2] || 0),
+    endH: Number(m[3]),
+    endM: Number(m[4] || 0)
+  };
+  const ok = (h, mi) => h >= 0 && h <= 23 && mi >= 0 && mi <= 59;
+  return ok(range.startH, range.startM) && ok(range.endH, range.endM) ? range : null;
+}
+
+function getWorkingHoursRows() {
+  const popup = document.querySelector("#punch-clock-popup");
+  if (!popup) return null;
+  return Array.from(
+    popup.querySelectorAll("#workingHoursPunchClockGrid div[role='row'].ag-row")
+  );
+}
+
+function getWhRowIndex(row) {
+  return Number(row.getAttribute("row-index"));
+}
+
+function findWhRowByIndex(index) {
+  return (getWorkingHoursRows() || []).find((r) => getWhRowIndex(r) === index) || null;
+}
+
+function setSelectValue(select, value) {
+  if (!select) return false;
+  select.value = String(value);
+  if (select.value !== String(value)) return false;
+  select.dispatchEvent(new Event("input", { bubbles: true }));
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+  select.dispatchEvent(new Event("blur", { bubbles: true }));
+  return true;
+}
+
+function setWhTime(row, colId, h, m) {
+  const cell = row.querySelector(`[col-id="${colId}"]`);
+  if (!cell) return false;
+  const hours = cell.querySelector("select[aria-label$='hours']");
+  const minutes = cell.querySelector("select[aria-label$='minutes']");
+  return setSelectValue(hours, h) && setSelectValue(minutes, m);
+}
+
+function fillWhRange(row, startCol, endCol, range) {
+  return (
+    setWhTime(row, startCol, range.startH, range.startM) &&
+    setWhTime(row, endCol, range.endH, range.endM)
+  );
+}
+
+async function waitForCondition(fn, timeout = 3000, step = 50) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const v = fn();
+    if (v) return v;
+    await wait(step);
+  }
+  return null;
+}
+
+async function fillWorkingHoursDialog(config = state.config) {
+  const rows = getWorkingHoursRows();
+  if (!rows) {
+    showToast("Open the Working Hours dialog first.", "error");
+    return { filled: 0, errors: 1 };
+  }
+
+  // Only rows with a date (rows added with "+" have an empty date cell).
+  const dayRows = rows
+    .map((row) => {
+      const text = (row.querySelector('[col-id="dateTime"]')?.textContent || "").trim();
+      return { idx: getWhRowIndex(row), weekday: getWeekdayIndexFromText(text), text };
+    })
+    .filter((r) => r.text && r.weekday !== null && r.weekday <= 4)
+    .sort((a, b) => b.idx - a.idx); // bottom-up: "+" only renumbers later rows
+
+  let filled = 0;
+  let errors = 0;
+
+  for (const day of dayRows) {
+    const cfg = (config.workingHours || {})[day.weekday] || {};
+    const work1 = parseTimeRange(cfg.work1);
+    const brk = parseTimeRange(cfg.brk);
+    const work2 = parseTimeRange(cfg.work2);
+    if (!work1) continue;
+
+    const row = findWhRowByIndex(day.idx);
+    if (!row) { errors++; continue; }
+
+    let ok = fillWhRange(row, "workStartTime", "workEndTime", work1);
+    if (brk) ok = fillWhRange(row, "mealStartTime", "mealEndTime", brk) && ok;
+
+    if (work2) {
+      const addBtn = row.querySelector('button[aria-label="Add new row"]');
+      const enabled = await waitForCondition(
+        () => addBtn && addBtn.getAttribute("aria-disabled") !== "true" && !addBtn.disabled
+      );
+      if (!enabled) { errors++; continue; }
+      addBtn.click();
+      const newRow = await waitForCondition(() => findWhRowByIndex(day.idx + 1));
+      if (!newRow) { errors++; continue; }
+      await wait(100);
+      ok = fillWhRange(newRow, "workStartTime", "workEndTime", work2) && ok;
+    }
+
+    if (ok) filled++; else errors++;
+    await wait(100);
+  }
+
+  showToast(
+    errors
+      ? `Working hours: ${filled} days filled, ${errors} with errors. Review before saving.`
+      : `Working hours: ${filled} days filled. Review and press Save.`,
+    errors ? "error" : "success"
+  );
+  return { filled, errors };
+}
+
+function readWorkingHoursFromUI() {
+  const out = {};
+  state.panel.querySelectorAll(".myte-wh-input").forEach((input) => {
+    const d = input.dataset.whDay;
+    out[d] = out[d] || { work1: "", brk: "", work2: "" };
+    out[d][input.dataset.whField] = input.value.trim();
+  });
+  return out;
+}
+
+function applyWorkingHoursToUI() {
+  state.panel.querySelectorAll(".myte-wh-input").forEach((input) => {
+    const cfg = (state.config.workingHours || {})[input.dataset.whDay] || {};
+    input.value = cfg[input.dataset.whField] || "";
+  });
+}
+
+function wireWorkingHoursEvents() {
+  state.panel.querySelectorAll(".myte-wh-input").forEach((input) => {
+    input.addEventListener("change", () => {
+      const val = input.value.trim();
+      input.classList.toggle("myte-wh-invalid", !!val && !parseTimeRange(val));
+      state.config.workingHours = readWorkingHoursFromUI();
+      saveConfig();
+    });
+  });
+  state.panel.querySelector("#myte-fill-wh-btn")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      await fillWorkingHoursDialog();
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 function applyConfigToUI() {
   if (!state.panel) return;
 
@@ -2147,6 +2320,7 @@ function applyConfigToUI() {
   const autoRest = state.panel.querySelector("#myte-auto-rest");
   if (autoRest) autoRest.checked = !!cfg.autoCheckRest;
   updateAutoRestVisibility();
+  applyWorkingHoursToUI();
 
   const weeklyPatternEnabled = state.panel.querySelector(
     "#myte-weekly-pattern-enabled"
@@ -2175,6 +2349,8 @@ function applyConfigToUI() {
  ***********************/
 function wirePanelEvents() {
   if (!state.panel) return;
+
+  wireWorkingHoursEvents();
 
   state.panel
     .querySelector("#myte-close-btn")
@@ -2533,6 +2709,8 @@ function exposeTestApi() {
     loadPanelTemplate,
     loadConfig,
     saveConfig,
+    parseTimeRange,
+    fillWorkingHoursDialog,
     wait,
     pressTab,
     fillEditableDiv,
