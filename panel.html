@@ -176,6 +176,43 @@
             </div>
         </details>
 
+        <!-- Block 4: Working hours -->
+        <details class="myte-block" id="myte-wh-block">
+            <summary class="myte-block-summary">
+                <span>Working hours (breaks)</span>
+                <span class="myte-chevron"></span>
+            </summary>
+            <div class="myte-block-inner">
+                <small class="myte-help">
+                    Open MyTE's "Working Hours" dialog first. Format HH:MM-HH:MM, empty = none.
+                    Columns: work, break, second work row.
+                </small>
+                <div class="myte-wh-rows">
+                    <div class="myte-wh-row"><div class="myte-week-label">Mon</div>
+                        <input class="myte-wh-input" data-wh-day="0" data-wh-field="work1" placeholder="08:00-14:00" aria-label="Mon work" />
+                        <input class="myte-wh-input" data-wh-day="0" data-wh-field="brk" placeholder="break" aria-label="Mon break" />
+                        <input class="myte-wh-input" data-wh-day="0" data-wh-field="work2" placeholder="2nd row" aria-label="Mon second row" /></div>
+                    <div class="myte-wh-row"><div class="myte-week-label">Tue</div>
+                        <input class="myte-wh-input" data-wh-day="1" data-wh-field="work1" placeholder="08:00-14:00" aria-label="Tue work" />
+                        <input class="myte-wh-input" data-wh-day="1" data-wh-field="brk" placeholder="break" aria-label="Tue break" />
+                        <input class="myte-wh-input" data-wh-day="1" data-wh-field="work2" placeholder="2nd row" aria-label="Tue second row" /></div>
+                    <div class="myte-wh-row"><div class="myte-week-label">Wed</div>
+                        <input class="myte-wh-input" data-wh-day="2" data-wh-field="work1" placeholder="08:00-14:00" aria-label="Wed work" />
+                        <input class="myte-wh-input" data-wh-day="2" data-wh-field="brk" placeholder="break" aria-label="Wed break" />
+                        <input class="myte-wh-input" data-wh-day="2" data-wh-field="work2" placeholder="2nd row" aria-label="Wed second row" /></div>
+                    <div class="myte-wh-row"><div class="myte-week-label">Thu</div>
+                        <input class="myte-wh-input" data-wh-day="3" data-wh-field="work1" placeholder="08:00-14:00" aria-label="Thu work" />
+                        <input class="myte-wh-input" data-wh-day="3" data-wh-field="brk" placeholder="break" aria-label="Thu break" />
+                        <input class="myte-wh-input" data-wh-day="3" data-wh-field="work2" placeholder="2nd row" aria-label="Thu second row" /></div>
+                    <div class="myte-wh-row"><div class="myte-week-label">Fri</div>
+                        <input class="myte-wh-input" data-wh-day="4" data-wh-field="work1" placeholder="08:00-15:00" aria-label="Fri work" />
+                        <input class="myte-wh-input" data-wh-day="4" data-wh-field="brk" placeholder="break" aria-label="Fri break" />
+                        <input class="myte-wh-input" data-wh-day="4" data-wh-field="work2" placeholder="2nd row" aria-label="Fri second row" /></div>
+                </div>
+                <button id="myte-fill-wh-btn" class="myte-btn myte-btn-secondary">Fill Working Hours</button>
+            </div>
+        </details>
+
         <div id="myte-bottom-bar">
             <button id="myte-fill-btn-fixed" class="myte-btn myte-btn-primary">
                 Fill Timesheet
